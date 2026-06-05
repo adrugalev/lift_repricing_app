@@ -61,15 +61,15 @@ INPUT_COLUMN_CONFIG = {
 RESULT_DISPLAY_COLUMNS = {
     "№": "№",
     "Лифт": "Лифт",
-    "Исходная цена лифта, CNY": "Лифт до переноса|CNY",
+    "Исходная цена лифта, CNY": "Лифт до|переноса|CNY",
     "Количество остановок": "Ост.",
-    "Монтаж всего до переноса, RUB": "Монтаж до переноса|₽",
-    "Перенос за 1 остановку, RUB": "Перенос за остановку|₽",
-    "Сумма переноса, RUB": "Перенос всего|₽",
-    "Перенесено в лифт, CNY": "Перенос в лифт|CNY",
-    "Новая цена лифта, CNY": "Лифт после переноса|CNY",
-    "Новый монтаж, RUB": "Монтаж после переноса|₽",
-    "Проверка / статус": "Статус",
+    "Монтаж всего до переноса, RUB": "Монтаж до|переноса|₽",
+    "Перенос за 1 остановку, RUB": "Перенос за|остановку|₽",
+    "Сумма переноса, RUB": "Перенос|всего|₽",
+    "Перенесено в лифт, CNY": "Перенос|в лифт|CNY",
+    "Новая цена лифта, CNY": "Лифт после|переноса|CNY",
+    "Новый монтаж, RUB": "Монтаж после|переноса|₽",
+    "Новый монтаж за 1 остановку, RUB": "Монтаж после|переноса за 1 ост.|₽",
 }
 
 RESULT_CNY_COLUMNS = [
@@ -83,6 +83,7 @@ RESULT_RUB_COLUMNS = [
     "Перенос за 1 остановку, RUB",
     "Сумма переноса, RUB",
     "Новый монтаж, RUB",
+    "Новый монтаж за 1 остановку, RUB",
 ]
 
 RESULT_COLUMN_CONFIG = {
@@ -96,6 +97,7 @@ RESULT_COLUMN_CONFIG = {
     "+CNY": st.column_config.TextColumn("+CNY", width=105),
     "После CNY": st.column_config.TextColumn("После CNY", width=120),
     "Монт. после ₽": st.column_config.TextColumn("Монт. после ₽", width=125),
+    "Монт. после/ост. ₽": st.column_config.TextColumn("Монт. после/ост. ₽", width=125),
     "Статус": st.column_config.TextColumn("Статус", width=75),
 }
 
@@ -146,7 +148,11 @@ def default_input_dataframe() -> pd.DataFrame:
     )
 
 
-def show_summary_metrics(summary: object) -> None:
+def format_exchange_rate(value: float) -> str:
+    return f"{value:.4f}".replace(".", ",")
+
+
+def show_summary_metrics(summary: object, params: ProjectParams) -> None:
     metrics = [
         ("Лифты", format_cny(summary.total_original_lifts_cny), format_cny(summary.total_new_lifts_cny), format_cny(summary.lift_price_delta_cny)),
         ("Монтаж", format_rub(summary.total_original_installation_rub), format_rub(summary.total_new_installation_rub), f"-{format_rub(summary.total_transferred_rub)}"),
@@ -155,6 +161,8 @@ def show_summary_metrics(summary: object) -> None:
         f"<tr><td>{label}</td><td>{before}</td><td>{after}</td><td>{delta}</td></tr>"
         for label, before, after, delta in metrics
     )
+    rate_label = f"{format_exchange_rate(params.exchange_rate_rub_per_cny)} RUB за 1 CNY"
+    body_rows += f'<tr><td>Курс переноса</td><td colspan="3">{rate_label}</td></tr>'
     st.markdown(
         f"""
         <style>
@@ -186,6 +194,10 @@ def show_summary_metrics(summary: object) -> None:
           .summary-table td:first-child {{
             text-align: left;
             font-weight: 600;
+          }}
+          .summary-table td[colspan] {{
+            text-align: left;
+            color: #334155;
           }}
         </style>
         <table class="summary-table">
@@ -255,16 +267,16 @@ def compact_input_dataframe(df: pd.DataFrame, installation_markup: float) -> pd.
 def render_compact_table(df: pd.DataFrame) -> str:
     column_widths = {
         "№": "4%",
-        "Лифт": "7%",
-        "Лифт до переноса|CNY": "10%",
+        "Лифт": "6%",
+        "Лифт до|переноса|CNY": "10%",
         "Ост.": "5%",
-        "Монтаж до переноса|₽": "11%",
-        "Перенос за остановку|₽": "9%",
-        "Перенос всего|₽": "10%",
-        "Перенос в лифт|CNY": "9%",
-        "Лифт после переноса|CNY": "10%",
-        "Монтаж после переноса|₽": "11%",
-        "Статус": "6%",
+        "Монтаж до|переноса|₽": "10%",
+        "Перенос за|остановку|₽": "9%",
+        "Перенос|всего|₽": "9%",
+        "Перенос|в лифт|CNY": "8%",
+        "Лифт после|переноса|CNY": "10%",
+        "Монтаж после|переноса|₽": "10%",
+        "Монтаж после|переноса за 1 ост.|₽": "11%",
     }
     header_cells = "".join(
         f'<th style="width: {column_widths.get(column, "auto")}">{"<br>".join(escape(part) for part in str(column).split("|"))}</th>'
@@ -306,21 +318,24 @@ def render_compact_table(df: pd.DataFrame) -> str:
       .result-table th:nth-child(9),
       .result-table td:nth-child(9),
       .result-table th:nth-child(10),
-      .result-table td:nth-child(10) {{
+      .result-table td:nth-child(10),
+      .result-table th:nth-child(11),
+      .result-table td:nth-child(11) {{
         font-weight: 700;
         color: #111827;
       }}
       .result-table th:nth-child(9),
-      .result-table th:nth-child(10) {{
+      .result-table th:nth-child(10),
+      .result-table th:nth-child(11) {{
         background: #dcfce7;
         color: #166534;
       }}
       .result-table td:nth-child(9),
-      .result-table td:nth-child(10) {{
+      .result-table td:nth-child(10),
+      .result-table td:nth-child(11) {{
         background: #f0fdf4;
       }}
-      .result-table td:nth-child(2),
-      .result-table td:last-child {{
+      .result-table td:nth-child(2) {{
         text-align: left;
       }}
     </style>
@@ -405,6 +420,8 @@ def format_summary_dataframe(df: pd.DataFrame) -> pd.DataFrame:
             return format_cny(float(value))
         if currency == "RUB":
             return format_rub(float(value))
+        if currency == "RATE":
+            return f"{format_exchange_rate(float(value))} RUB за 1 CNY"
         return str(value)
 
     formatted["Значение"] = formatted.apply(format_row, axis=1)
@@ -547,14 +564,14 @@ def main() -> None:
     st.markdown(render_compact_table(compact_result_dataframe(result_df)), unsafe_allow_html=True)
 
     st.subheader("Сводные показатели")
-    show_summary_metrics(summary)
+    show_summary_metrics(summary, params)
 
     with st.expander("Подробная сводка"):
         st.dataframe(
-            format_summary_dataframe(summary_to_dataframe(summary)),
+            format_summary_dataframe(summary_to_dataframe(summary, params)),
             use_container_width=True,
             hide_index=True,
-            height=table_height(11, max_rows=11),
+            height=table_height(12, max_rows=12),
         )
 
     if st.session_state.pricing_file_bytes:

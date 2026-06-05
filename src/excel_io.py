@@ -285,8 +285,13 @@ def results_to_dataframe(results: Iterable[LiftResult]) -> pd.DataFrame:
     )
 
 
-def summary_to_dataframe(summary: ProjectSummary) -> pd.DataFrame:
+def summary_to_dataframe(summary: ProjectSummary, params: ProjectParams | None = None) -> pd.DataFrame:
     rows = [
+        *(
+            [("Курс переноса, RUB за 1 CNY", params.exchange_rate_rub_per_cny, "RATE")]
+            if params is not None
+            else []
+        ),
         ("Общая исходная стоимость лифтов, CNY", summary.total_original_lifts_cny, "CNY"),
         ("Общая новая стоимость лифтов, CNY", summary.total_new_lifts_cny, "CNY"),
         ("Разница по лифтам, CNY", summary.lift_price_delta_cny, "CNY"),
@@ -314,7 +319,7 @@ def export_results_to_excel(
 
     _write_inputs_sheet(workbook, inputs_df, params)
     _write_results_sheet(workbook, results_to_dataframe(results))
-    _write_summary_sheet(workbook, summary_to_dataframe(summary))
+    _write_summary_sheet(workbook, summary_to_dataframe(summary, params))
 
     output = BytesIO()
     workbook.save(output)
@@ -766,6 +771,8 @@ def _write_summary_sheet(workbook: Workbook, summary_df: pd.DataFrame) -> None:
             ws.cell(row_idx, 2).number_format = CNY_NUMBER_FORMAT
         elif currency == "RUB":
             ws.cell(row_idx, 2).number_format = RUB_NUMBER_FORMAT
+        elif currency == "RATE":
+            ws.cell(row_idx, 2).number_format = "0.0000"
     _set_widths(ws)
 
 
