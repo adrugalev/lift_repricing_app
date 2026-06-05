@@ -191,6 +191,47 @@ def test_load_pricing_file_with_installation_cost_price_header(tmp_path) -> None
     assert params.installation_markup == pytest.approx(0.1111111111111111)
 
 
+def test_load_pricing_file_without_installation_values_reports_clear_error(tmp_path) -> None:
+    workbook = Workbook()
+    ws = workbook.active
+    ws.title = "Стоимость"
+    ws["A2"] = "Продукт"
+    ws["B2"] = "Кол-во лифтов"
+    ws["C2"] = "Кол-во этажей"
+    ws["I2"] = "Общая стоимость для клиента"
+    ws["J2"] = "Стоимость монтажа за этаж"
+    ws["A3"] = "L1"
+    ws["B3"] = 1
+    ws["C3"] = 27
+    ws["I3"] = 250_000
+    ws["A4"] = "Итого"
+    path = tmp_path / "pricing_without_installation.xlsx"
+    workbook.save(path)
+
+    with pytest.raises(ValueError, match="нет стоимости монтажа"):
+        load_pricing_from_excel(path)
+
+
+def test_load_pricing_file_without_installation_column_reports_clear_error(tmp_path) -> None:
+    workbook = Workbook()
+    ws = workbook.active
+    ws.title = "Стоимость"
+    ws["A2"] = "Продукт"
+    ws["B2"] = "Кол-во лифтов"
+    ws["C2"] = "Кол-во этажей"
+    ws["I2"] = "Общая стоимость для клиента"
+    ws["A3"] = "L1"
+    ws["B3"] = 1
+    ws["C3"] = 27
+    ws["I3"] = 250_000
+    ws["A4"] = "Итого"
+    path = tmp_path / "pricing_without_installation_column.xlsx"
+    workbook.save(path)
+
+    with pytest.raises(ValueError, match="нет колонки со стоимостью монтажа"):
+        load_pricing_from_excel(path)
+
+
 def test_export_repriced_pricing_file_updates_original_cost_sheet(tmp_path) -> None:
     workbook = Workbook()
     ws = workbook.active

@@ -52,6 +52,8 @@ def load_pricing_from_excel(source: str | BinaryIO | BytesIO) -> tuple[pd.DataFr
     rows: list[dict[str, Any]] = []
     warnings: list[str] = []
     number = 1
+    lift_rows_count = 0
+    rows_without_installation = 0
 
     for row_idx in range(header_row + 1, ws.max_row + 1):
         lift_name = ws.cell(row_idx, columns["lift_name"]).value
@@ -60,10 +62,14 @@ def load_pricing_from_excel(source: str | BinaryIO | BytesIO) -> tuple[pd.DataFr
         if str(lift_name).strip().lower() == "итого":
             break
 
+        lift_rows_count += 1
         qty = _positive_int_or_one(ws.cell(row_idx, columns["quantity"]).value)
         price_cny = ws.cell(row_idx, columns["price_cny"]).value
         stops = ws.cell(row_idx, columns["stops"]).value
         installation_per_stop = ws.cell(row_idx, columns["installation_per_stop"]).value
+
+        if is_blank(installation_per_stop):
+            rows_without_installation += 1
 
         if any(is_blank(value) for value in [price_cny, stops, installation_per_stop]):
             warnings.append(f"Строка {row_idx}: пропущена, не заполнены цена, остановки или монтаж.")
@@ -83,6 +89,13 @@ def load_pricing_from_excel(source: str | BinaryIO | BytesIO) -> tuple[pd.DataFr
                 }
             )
             number += 1
+
+    if lift_rows_count > 0 and not rows and rows_without_installation == lift_rows_count:
+        raise ValueError(
+            "В этой расценке нет стоимости монтажа. Соответственно этот файл невозможно "
+            "обработать для групповой переоценки, потому что перенос выполняется из "
+            "рублевой стоимости монтажа в стоимость лифта."
+        )
 
     params = _extract_pricing_params(ws)
     if params is None:
@@ -180,6 +193,13 @@ def _match_pricing_columns(headers: dict[str, int]) -> dict[str, int] | None:
         "себестоимость монтажа",
         "монтаж/демонтаж",
     )
+
+    if all([lift_name, stops, price_cny]) and not installation_per_stop:
+        raise ValueError(
+            "В этой расценке нет колонки со стоимостью монтажа. Соответственно этот файл "
+            "невозможно обработать для групповой переоценки, потому что перенос выполняется "
+            "из рублевой стоимости монтажа в стоимость лифта."
+        )
 
     if not all([lift_name, stops, price_cny, installation_per_stop]):
         return None
