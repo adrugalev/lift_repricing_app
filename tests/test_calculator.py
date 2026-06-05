@@ -63,6 +63,33 @@ def test_fixed_method_caps_transfer_by_installation_with_markup() -> None:
     assert result.status == "OK, перенос ограничен монтажом"
 
 
+def test_currency_reserve_uses_protective_transfer_rate() -> None:
+    params = ProjectParams(
+        exchange_rate_rub_per_cny=10,
+        installation_markup=0.1,
+        currency_reserve_share=0.05,
+        transfer_method=TransferMethod.PERCENT,
+        transfer_share=0.2,
+        fixed_transfer_per_stop_rub=0,
+    )
+    lift = LiftInput(
+        number=1,
+        lift_name="L1",
+        original_lift_price_cny=100_000,
+        stops=2,
+        installation_price_per_stop_rub=100_000,
+    )
+
+    result = calculate_lift(lift, params)
+
+    assert params.transfer_exchange_rate_rub_per_cny == pytest.approx(9.5)
+    assert result.transfer_total_rub == pytest.approx(44_000)
+    assert result.transferred_to_lift_cny == pytest.approx(44_000 / 9.5)
+    assert result.new_lift_price_cny == pytest.approx(104_631.57894736843)
+    assert result.control_cny == pytest.approx(0, abs=0.01)
+    assert result.status == "OK"
+
+
 def test_project_summary_preserves_total_project_value(excel_percent_params: ProjectParams) -> None:
     lifts = [
         LiftInput(
@@ -89,4 +116,3 @@ def test_project_summary_preserves_total_project_value(excel_percent_params: Pro
     assert summary.total_new_installation_rub == pytest.approx(3_077_802.4)
     assert summary.project_control_cny == pytest.approx(0, abs=0.01)
     assert summary.status == "OK"
-

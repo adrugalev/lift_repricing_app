@@ -24,16 +24,16 @@ def calculate_lift(lift: LiftInput, params: ProjectParams) -> LiftResult:
         capped = params.fixed_transfer_per_stop_rub > installation_per_stop_with_markup
 
     transfer_total = lift.stops * transfer_per_stop
-    transferred_to_lift_cny = transfer_total / params.exchange_rate_rub_per_cny
+    transferred_to_lift_cny = transfer_total / params.transfer_exchange_rate_rub_per_cny
     new_lift_price_cny = lift.original_lift_price_cny + transferred_to_lift_cny
     new_installation_total = original_installation_total - transfer_total
     new_installation_per_stop = new_installation_total / lift.stops
 
     project_before = (
         lift.original_lift_price_cny
-        + original_installation_total / params.exchange_rate_rub_per_cny
+        + original_installation_total / params.transfer_exchange_rate_rub_per_cny
     )
-    project_after = new_lift_price_cny + new_installation_total / params.exchange_rate_rub_per_cny
+    project_after = new_lift_price_cny + new_installation_total / params.transfer_exchange_rate_rub_per_cny
     control_cny = project_after - project_before
 
     if new_installation_total < -CONTROL_EPS_CNY:
@@ -77,10 +77,10 @@ def calculate_project(
     total_transferred_rub = sum(row.transfer_total_rub for row in results)
     total_transferred_cny = sum(row.transferred_to_lift_cny for row in results)
     total_project_before_cny = (
-        total_original_lifts_cny + total_original_installation_rub / params.exchange_rate_rub_per_cny
+        total_original_lifts_cny + total_original_installation_rub / params.transfer_exchange_rate_rub_per_cny
     )
     total_project_after_cny = (
-        total_new_lifts_cny + total_new_installation_rub / params.exchange_rate_rub_per_cny
+        total_new_lifts_cny + total_new_installation_rub / params.transfer_exchange_rate_rub_per_cny
     )
     project_control_cny = total_project_after_cny - total_project_before_cny
 
@@ -99,4 +99,3 @@ def calculate_project(
         project_control_cny=project_control_cny,
         status=status,
     )
-

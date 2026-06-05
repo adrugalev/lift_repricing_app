@@ -106,6 +106,7 @@ def default_params() -> ProjectParams:
     return ProjectParams(
         exchange_rate_rub_per_cny=11.13,
         installation_markup=0.0526,
+        currency_reserve_share=0.0,
         transfer_method=TransferMethod.PERCENT,
         transfer_share=0.2,
         fixed_transfer_per_stop_rub=0.0,
@@ -115,6 +116,7 @@ def default_params() -> ProjectParams:
 def sync_param_widgets(params: ProjectParams) -> None:
     st.session_state.exchange_rate_input = float(params.exchange_rate_rub_per_cny)
     st.session_state.installation_markup_input = float(params.installation_markup)
+    st.session_state.currency_reserve_input = float(params.currency_reserve_share * 100)
     st.session_state.method_input = params.transfer_method.value
     st.session_state.transfer_share_input = float(params.transfer_share)
     st.session_state.fixed_transfer_input = float(params.fixed_transfer_per_stop_rub)
@@ -124,6 +126,7 @@ def ensure_param_widgets_initialized(params: ProjectParams) -> None:
     defaults = {
         "exchange_rate_input": float(params.exchange_rate_rub_per_cny),
         "installation_markup_input": float(params.installation_markup),
+        "currency_reserve_input": float(params.currency_reserve_share * 100),
         "method_input": params.transfer_method.value,
         "transfer_share_input": float(params.transfer_share),
         "fixed_transfer_input": float(params.fixed_transfer_per_stop_rub),
@@ -152,6 +155,10 @@ def format_exchange_rate(value: float) -> str:
     return f"{value:.2f}".replace(".", ",")
 
 
+def format_percent(value: float) -> str:
+    return f"{value * 100:.1f}%".replace(".", ",")
+
+
 def show_summary_metrics(summary: object, params: ProjectParams) -> None:
     metrics = [
         ("Лифты", format_cny(summary.total_original_lifts_cny), format_cny(summary.total_new_lifts_cny), format_cny(summary.lift_price_delta_cny)),
@@ -161,8 +168,13 @@ def show_summary_metrics(summary: object, params: ProjectParams) -> None:
         f"<tr><td>{label}</td><td>{before}</td><td>{after}</td><td>{delta}</td></tr>"
         for label, before, after, delta in metrics
     )
-    rate_label = f"{format_exchange_rate(params.exchange_rate_rub_per_cny)} RUB за 1 CNY"
-    body_rows += f'<tr><td>Курс переноса</td><td colspan="3">{rate_label}</td></tr>'
+    body_rows += (
+        f'<tr><td>Курс из расценки</td><td colspan="3">'
+        f"{format_exchange_rate(params.exchange_rate_rub_per_cny)} RUB за 1 CNY</td></tr>"
+        f'<tr><td>Валютный резерв</td><td colspan="3">{format_percent(params.currency_reserve_share)}</td></tr>'
+        f'<tr><td>Курс переноса</td><td colspan="3">'
+        f"{format_exchange_rate(params.transfer_exchange_rate_rub_per_cny)} RUB за 1 CNY</td></tr>"
+    )
     st.markdown(
         f"""
         <style>
@@ -422,6 +434,8 @@ def format_summary_dataframe(df: pd.DataFrame) -> pd.DataFrame:
             return format_rub(float(value))
         if currency == "RATE":
             return f"{format_exchange_rate(float(value))} RUB за 1 CNY"
+        if currency == "PERCENT":
+            return format_percent(float(value))
         return str(value)
 
     formatted["Значение"] = formatted.apply(format_row, axis=1)
@@ -508,13 +522,28 @@ def main() -> None:
 
     st.subheader("Параметры переноса")
     method_options = [TransferMethod.PERCENT.value, TransferMethod.FIXED.value]
-    method_col, value_col = st.columns([1, 4])
+    method_col, reserve_col, value_col = st.columns([1, 1, 3])
     with method_col:
         method = st.selectbox(
             "Метод",
             method_options,
             index=method_options.index(st.session_state.method_input),
             key="method_input",
+        )
+    with reserve_col:
+        currency_reserve_percent = st.number_input(
+            "Валютный резерв, %",
+            min_value=0.0,
+            max_value=99.0,
+            step=0.5,
+            format="%.1f",
+            help=(
+                "Защитный запас от курсовой разницы при переносе рублевого монтажа в цену лифта в CNY. "
+                "Курс переноса считается как: курс из расценки × (1 - валютный резерв). "
+                "Пример: курс 11,00 RUB/CNY и резерв 5% дают курс переноса 10,45 RUB/CNY. "
+                "Тогда одна и та же сумма монтажа в RUB переносится в большее количество CNY."
+            ),
+            key="currency_reserve_input",
         )
 
     if TransferMethod.from_raw(method) == TransferMethod.PERCENT:
@@ -541,6 +570,7 @@ def main() -> None:
     raw_params = {
         "exchange_rate_rub_per_cny": st.session_state.exchange_rate_input,
         "installation_markup": st.session_state.installation_markup_input,
+        "currency_reserve_share": currency_reserve_percent / 100,
         "transfer_method": method,
         "transfer_share": transfer_share,
         "fixed_transfer_per_stop_rub": fixed_transfer,
@@ -572,7 +602,7 @@ def main() -> None:
             format_summary_dataframe(summary_to_dataframe(summary, params)),
             use_container_width=True,
             hide_index=True,
-            height=table_height(12, max_rows=12),
+            height=table_height(14, max_rows=14),
         )
 
     if st.session_state.pricing_file_bytes:

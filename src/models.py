@@ -46,9 +46,14 @@ class ProjectParams(BaseModel):
 
     exchange_rate_rub_per_cny: float = Field(gt=0)
     installation_markup: float = Field(ge=0)
+    currency_reserve_share: float = Field(default=0.0, ge=0, lt=1)
     transfer_method: TransferMethod = TransferMethod.PERCENT
     transfer_share: float = Field(default=0.0, ge=0, le=1)
     fixed_transfer_per_stop_rub: float = Field(default=0.0, ge=0)
+
+    @property
+    def transfer_exchange_rate_rub_per_cny(self) -> float:
+        return self.exchange_rate_rub_per_cny * (1 - self.currency_reserve_share)
 
     @field_validator("transfer_method", mode="before")
     @classmethod
@@ -94,4 +99,3 @@ class ProjectSummary(BaseModel):
     total_project_after_cny: float
     project_control_cny: float
     status: str
-

@@ -288,7 +288,11 @@ def results_to_dataframe(results: Iterable[LiftResult]) -> pd.DataFrame:
 def summary_to_dataframe(summary: ProjectSummary, params: ProjectParams | None = None) -> pd.DataFrame:
     rows = [
         *(
-            [("Курс переноса, RUB за 1 CNY", params.exchange_rate_rub_per_cny, "RATE")]
+            [
+                ("Курс из расценки, RUB за 1 CNY", params.exchange_rate_rub_per_cny, "RATE"),
+                ("Валютный резерв", params.currency_reserve_share, "PERCENT"),
+                ("Курс переноса, RUB за 1 CNY", params.transfer_exchange_rate_rub_per_cny, "RATE"),
+            ]
             if params is not None
             else []
         ),
@@ -720,6 +724,8 @@ def _write_inputs_sheet(workbook: Workbook, inputs_df: pd.DataFrame, params: Pro
     params_rows = [
         ("Курс RUB за 1 CNY", params.exchange_rate_rub_per_cny),
         ("Наценка на монтаж", params.installation_markup),
+        ("Валютный резерв", params.currency_reserve_share),
+        ("Курс переноса RUB за 1 CNY", params.transfer_exchange_rate_rub_per_cny),
         ("Метод переноса", params.transfer_method.value),
         ("Доля переноса", params.transfer_share),
         ("Фиксированный перенос на 1 остановку, RUB", params.fixed_transfer_per_stop_rub),
@@ -728,16 +734,18 @@ def _write_inputs_sheet(workbook: Workbook, inputs_df: pd.DataFrame, params: Pro
         ws.cell(row_idx, 1, label)
         ws.cell(row_idx, 2, value)
     ws.cell(4, 2).number_format = PERCENT_NUMBER_FORMAT
-    ws.cell(6, 2).number_format = PERCENT_NUMBER_FORMAT
-    ws.cell(7, 2).number_format = RUB_NUMBER_FORMAT
+    ws.cell(5, 2).number_format = PERCENT_NUMBER_FORMAT
+    ws.cell(6, 2).number_format = "0.0000"
+    ws.cell(8, 2).number_format = PERCENT_NUMBER_FORMAT
+    ws.cell(9, 2).number_format = RUB_NUMBER_FORMAT
 
-    start_row = 10
+    start_row = 12
     _write_dataframe(ws, inputs_df, start_row)
     _format_table(ws, start_row, start_row + len(inputs_df), len(INPUT_COLUMNS))
     for col_idx in (3,):
         _format_column(ws, start_row + 1, start_row + len(inputs_df), col_idx, CNY_NUMBER_FORMAT)
     _format_column(ws, start_row + 1, start_row + len(inputs_df), 5, RUB_NUMBER_FORMAT)
-    ws.freeze_panes = "A11"
+    ws.freeze_panes = "A13"
     _set_widths(ws)
 
 
@@ -773,6 +781,8 @@ def _write_summary_sheet(workbook: Workbook, summary_df: pd.DataFrame) -> None:
             ws.cell(row_idx, 2).number_format = RUB_NUMBER_FORMAT
         elif currency == "RATE":
             ws.cell(row_idx, 2).number_format = "0.0000"
+        elif currency == "PERCENT":
+            ws.cell(row_idx, 2).number_format = PERCENT_NUMBER_FORMAT
     _set_widths(ws)
 
 

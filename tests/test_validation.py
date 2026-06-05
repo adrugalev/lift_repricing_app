@@ -70,6 +70,18 @@ def test_transfer_share_must_be_between_zero_and_one() -> None:
         )
 
 
+def test_currency_reserve_must_be_less_than_one() -> None:
+    with pytest.raises(ValidationError):
+        ProjectParams(
+            exchange_rate_rub_per_cny=10,
+            installation_markup=0,
+            currency_reserve_share=1,
+            transfer_method=TransferMethod.PERCENT,
+            transfer_share=0.2,
+            fixed_transfer_per_stop_rub=0,
+        )
+
+
 def test_excel_method_alias_sum_per_stop_is_supported() -> None:
     params = ProjectParams(
         exchange_rate_rub_per_cny=10,
