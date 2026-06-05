@@ -362,10 +362,10 @@ def render_input_table(df: pd.DataFrame) -> str:
     column_widths = {
         "№": "6%",
         "Лифт": "12%",
-        "Цена лифта с наценкой|CNY": "17%",
+        "Цена лифта с наценкой|CNY": "22%",
         "Остановки": "12%",
-        "Монтаж за остановку|с наценкой, ₽": "26%",
-        "Монтаж за лифт|с наценкой, ₽": "27%",
+        "Монтаж за остановку|с наценкой, ₽": "24%",
+        "Монтаж за лифт|с наценкой, ₽": "24%",
     }
     header_cells = "".join(
         f'<th style="width: {column_widths.get(column, "auto")}">{"<br>".join(escape(part) for part in str(column).split("|"))}</th>'
