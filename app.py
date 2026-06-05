@@ -467,11 +467,17 @@ def main() -> None:
     st.title("Групповая переоценка лифтов EPSS")
     st.caption(repricing_version_label())
 
-    pricing_file = st.file_uploader(
-        "Загрузить файл расценки",
-        type=["xlsx"],
-        help="Например: файл с листом 'Стоимость'. Таблица лифтов будет заполнена из колонок Продукт, Кол-во этажей, Общая стоимость для клиента, Стоимость монтажа за этаж.",
-    )
+    with st.sidebar:
+        st.header("Файлы")
+        pricing_file = st.file_uploader(
+            "Расценка или расчет стоимости",
+            type=["xlsx"],
+            help=(
+                "Например: файл с листом 'Стоимость'. Таблица лифтов будет заполнена "
+                "из колонок Продукт, Кол-во этажей, Общая стоимость для клиента, "
+                "Стоимость монтажа за этаж."
+            ),
+        )
 
     if "input_df" not in st.session_state:
         st.session_state.input_df = default_input_dataframe()
