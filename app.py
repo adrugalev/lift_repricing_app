@@ -149,7 +149,7 @@ def default_input_dataframe() -> pd.DataFrame:
 
 
 def format_exchange_rate(value: float) -> str:
-    return f"{value:.4f}".replace(".", ",")
+    return f"{value:.2f}".replace(".", ",")
 
 
 def show_summary_metrics(summary: object, params: ProjectParams) -> None:
