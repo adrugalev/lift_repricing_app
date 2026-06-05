@@ -155,6 +155,42 @@ def test_load_pricing_file_from_cost_sheet(tmp_path) -> None:
     assert params.installation_markup == pytest.approx(0.052631578947368425)
 
 
+def test_load_pricing_file_with_installation_cost_price_header(tmp_path) -> None:
+    workbook = Workbook()
+    ws = workbook.active
+    ws.title = "Стоимость"
+    ws["R1"] = "Маржа на  МОНТАЖ"
+    ws["S1"] = 0.1
+    ws["A2"] = "Продукт"
+    ws["B2"] = "Кол-во лифтов"
+    ws["C2"] = "Кол-во этажей"
+    ws["J2"] = "Общая стоимость для клиента"
+    ws["K2"] = "Себестоимость монтажа/демонтажа"
+    ws["R2"] = "Наценка МОНТАЖ"
+    ws["S2"] = 0.1111111111111111
+    ws["A3"] = "Л1.1"
+    ws["B3"] = 1
+    ws["C3"] = 33
+    ws["J3"] = 450_000
+    ws["K3"] = 150_000
+    ws["A4"] = "Итого"
+    ws["A14"] = "Курс рубля у Юаню"
+    ws["E14"] = 11.44
+    path = tmp_path / "pricing_variant.xlsx"
+    workbook.save(path)
+
+    df, params, warnings = load_pricing_from_excel(path)
+
+    assert warnings == []
+    assert len(df) == 1
+    assert df.loc[0, "Лифт"] == "Л1.1"
+    assert df.loc[0, "Количество остановок"] == 33
+    assert df.loc[0, "Монтаж за 1 остановку без наценки, RUB"] == 150_000
+    assert params is not None
+    assert params.exchange_rate_rub_per_cny == 11.44
+    assert params.installation_markup == pytest.approx(0.1111111111111111)
+
+
 def test_export_repriced_pricing_file_updates_original_cost_sheet(tmp_path) -> None:
     workbook = Workbook()
     ws = workbook.active

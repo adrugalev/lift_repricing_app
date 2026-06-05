@@ -491,7 +491,11 @@ def main() -> None:
 
     if pricing_file and pricing_file.name != st.session_state.loaded_pricing_file_name:
         pricing_file_bytes = pricing_file.getvalue()
-        input_df, imported_params, warnings = load_pricing_from_excel(BytesIO(pricing_file_bytes))
+        try:
+            input_df, imported_params, warnings = load_pricing_from_excel(BytesIO(pricing_file_bytes))
+        except ValueError as exc:
+            st.error(str(exc))
+            return
         st.session_state.input_df = input_df if not input_df.empty else default_input_dataframe()
         if imported_params:
             st.session_state.params = imported_params

@@ -174,7 +174,12 @@ def _match_pricing_columns(headers: dict[str, int]) -> dict[str, int] | None:
     quantity = find("кол-во лифтов", "количество лифтов")
     stops = find("кол-во этажей", "количество этажей", "остановки")
     price_cny = find("общая стоимость для клиента", "цена лифта для клиента")
-    installation_per_stop = find("стоимость монтажа за этаж", "монтаж за 1 остановку")
+    installation_per_stop = find(
+        "стоимость монтажа за этаж",
+        "монтаж за 1 остановку",
+        "себестоимость монтажа",
+        "монтаж/демонтаж",
+    )
 
     if not all([lift_name, stops, price_cny, installation_per_stop]):
         return None
