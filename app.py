@@ -533,6 +533,7 @@ def main() -> None:
                 "Фиксированный перенос на 1 остановку, RUB",
                 min_value=0.0,
                 step=1000.0,
+                format="%.0f",
                 key="fixed_transfer_input",
             )
         transfer_share = float(st.session_state.transfer_share_input)
